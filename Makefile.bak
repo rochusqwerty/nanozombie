@@ -1,0 +1,13 @@
+all: bank
+
+bank: main.o init.o
+	mpicc -lglib-2.0 main.o init.o -o bank
+
+init.o: init.c 
+	mpicc -I/usr/lib64/glib-2.0/include/ -I/usr/include/glib-2.0/ init.c -c -Wall
+
+main.o: main.c main.h
+	mpicc -I/usr/lib64/glib-2.0/include/ -I/usr/include/glib-2.0/ main.c -c -Wall
+
+clear: 
+	rm *.o bank
