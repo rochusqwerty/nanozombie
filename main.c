@@ -1,11 +1,11 @@
 #include "main.h"
 
 #define procesy 16
-#define stroje_min 10
+#define stroje_min 5
 #define stroje_max 10
-#define lodzie_min 10
+#define lodzie_min 5
 #define lodzie_max 10
-#define poj_lodzi_min 10
+#define poj_lodzi_min 3
 #define poj_lodzi_max 10
 MPI_Datatype MPI_PAKIET_T;
 pthread_t threadCom, threadM;
@@ -17,7 +17,7 @@ int STAN_PROCESU=0;
 pthread_mutex_t lock;
 
 /* zamek do synchronizacji zmiennych współdzielonych */
-pthread_mutex_t stroje_mut = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t kucyki_mut = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t lodzie_mut = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t lamport_mut = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t packetMut = PTHREAD_MUTEX_INITIALIZER;
