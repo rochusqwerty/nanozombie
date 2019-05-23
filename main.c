@@ -20,6 +20,7 @@ pthread_mutex_t lock;
 pthread_mutex_t stroje_mut = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t lodzie_mut = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t lamport_mut = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t packetMut = PTHREAD_MUTEX_INITIALIZER;
 sem_t all_sem;
 // struct Turysta{
 //     int info_s; //0-nie che stroju, 1-chce stroj, 2-oddał stroj
@@ -29,7 +30,7 @@ sem_t all_sem;
 /* Ile każdy proces ma na początku*/
 int liczba_kucykow=0;
 //WERSJA NA 3
-int liczba_lodzi = kolejka_lodzi.size();
+int liczba_lodzi;
 
 /* info o turystach */
 //Turysta tab[procesy];
@@ -39,7 +40,7 @@ volatile char end = FALSE;
 void mainLoop(void);
 
 /* Deklaracje zapowiadające handlerów. */
-void initHandler(packet_t *pakiet);
+void initHandler(packet_init_t *pakiet);
 void takePony(packet_t *pakiet);
 void takeBoat(packet_t *pakiet);
 void imBack(packet_t *pakiet);
@@ -95,7 +96,7 @@ void mainLoop(void)
         pthread_mutex_lock( &packetMut );
             lamport_do_kucykow = lamport;
         pthread_mutex_unlock( &packetMut );
-        pakiet->kod=0;
+        pakiet.kod=0;
         for(i=0; i<size; i++)
             sendPacket(&pakiet, i, TAKE_PONY);
         //sem_wait(&all_sem);
@@ -111,7 +112,7 @@ void mainLoop(void)
             pthread_mutex_lock( &packetMut );
                 lamport_do_lodzi = lamport;
             pthread_mutex_unlock( &packetMut );
-            pakiet->kod=0;
+            pakiet.kod=0;
             for(i=0; i<size; i++)
                 sendPacket(&pakiet, i, TAKE_BOAT);
             while(size - liczba_lodzi > gorsze_lodzie)
@@ -148,13 +149,14 @@ void *monitorFunc(void *ptr)
 	srand( time( NULL ) );
     liczba_kucykow = rand() % (stroje_max - stroje_min) + stroje_min;
     for(int i = 0; i < rand() % (lodzie_max - lodzie_min) + lodzie_min; i++){
-        Lodz lodz = Lodz();
+        Lodz lodz;
         lodz.pojemnosc = rand() % (poj_lodzi_max - poj_lodzi_min) + poj_lodzi_min;
         //lodz.lista_id_turystow.clear();
-        kolejka_lodzi.push(lodz);
+        //kolejka_lodzi.push(lodz);
+       // lodz.ile_lodzi = rand() % (poj_lodzi_max - poj_lodzi_min) + poj_lodzi_min;
     }
     data.kucyki = liczba_kucykow;
-    data.kolejka = kolejka_lodzi;
+    // data.kolejka = kolejka_lodzi;
 }
 
 /* Wątek komunikacyjny - dla każdej otrzymanej wiadomości wywołuje jej handler */
@@ -192,8 +194,8 @@ void initHandler( packet_init_t *pakiet)
         println("Stan kucyki: %d\n", liczba_kucykow);
     pthread_mutex_unlock(&kucyki_mut);
     pthread_mutex_lock(&lodzie_mut);
-        kolejka_lodzi=pakiet->kolejka;
-        println("Stan lodzie: %d\n", kolejka_lodzi.size());
+        liczba_lodzi=pakiet->ile_lodzi//kolejka;
+        println("Stan lodzie: %d\n", liczba_lodzi);//kolejka_lodzi.size());
     pthread_mutex_unlock(&lodzie_mut);
 }
 

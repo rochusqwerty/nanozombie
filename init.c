@@ -5,9 +5,8 @@ int size;
 
 pthread_t threadDelay;
 //GQueue *delayStack;
-packetMut = PTHREAD_MUTEX_INITIALIZER;
 
-queue < Lodz > kolejka_lodzi;
+//queue < Lodz > kolejka_lodzi;
 
 void check_thread_support(int provided)
 {
@@ -60,10 +59,10 @@ void inicjuj(int *argc, char ***argv)
     MPI_Aint     offsets[FIELDNO];
 
     offsets[0] = offsetof(packet_t, ts);
-    offsets[1] = offsetof(packet_t, kasa);
+    offsets[1] = offsetof(packet_t, kod);
     offsets[2] = offsetof(packet_t, dst);
     offsets[3] = offsetof(packet_t, src);
-    offsets[4] = offsetof(packet_t, nowe_pole);
+    offsets[4] = offsetof(packet_t, waga_turysty);
     /* tutaj dodać offset nowego pola (offsets[2] = ... */
 
     MPI_Type_create_struct(nitems, blocklengths, offsets, typy, &MPI_PAKIET_T);
@@ -83,7 +82,7 @@ void inicjuj(int *argc, char ***argv)
 
 void finalizuj(void)
 {
-    pthread_mutex_destroy( &konto_mut);
+    // pthread_mutex_destroy( &konto_mut);
     pthread_join(threadCom,NULL);
     MPI_Type_free(&MPI_PAKIET_T);
     MPI_Finalize();
@@ -106,5 +105,7 @@ void sendPacketInit(packet_init_t *data, int type)
 	pthread_mutex_unlock( &packetMut );
     data->ts = lamport;
     //TO DO for do wszystkich
-        MPI_Send( data, 1, MPI_PAKIET_T, dst, type, MPI_COMM_WORLD);
+    int i;
+    for(i=0; i<size; i++)
+        MPI_Send( data, 1, MPI_PAKIET_T, i, type, MPI_COMM_WORLD);
 }

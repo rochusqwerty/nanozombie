@@ -5,20 +5,14 @@
 #define TRUE 1
 #define FALSE 0
 
-#define ROOT 0
+#define ROOT_PROC 0
 
-#define FINISH 1
-#define APP_MSG 2
-#define GIVE_YOUR_STATE 3
-#define MY_STATE_IS 4
-#define INIT 5
-#define TAKE_PONY 6
-#define TAKE_BOAT 7
-#define IM_BACK 8
+#define INIT 1
+#define TAKE_PONY 2
+#define TAKE_BOAT 3
+#define IM_BACK 4
 /* MAX_HANDLERS musi się równać wartości ostatniego typu pakietu + 1 */
-#define MAX_HANDLERS 9
-
-#define STARTING_MONEY 1000
+#define MAX_HANDLERS 5
 
 #include <mpi.h>
 #include <stdlib.h>
@@ -27,7 +21,7 @@
 #include <semaphore.h>
 #include <unistd.h>
 #include <string.h>
-#include <queue>
+//#include <queue>
 
 /* FIELDNO: liczba pól w strukturze packet_t */
 #define FIELDNO 5 //4
@@ -46,16 +40,18 @@ typedef struct {
 
 typedef struct{
     int pojemnosc;
-    std::queue < int > lista_id_turystow;
+    //std::queue < int > lista_id_turystow;
 }Lodz;
 
 typedef struct {
+    int ts;
     int kucyki;
-    std::queue < Lodz > kolejka; 
+    int ile_lodzi;
+    //std::queue < Lodz > kolejka; 
 } packet_init_t;
 
 
-extern std::queue < Lodz > kolejka_lodzi;
+//extern std::queue < Lodz > kolejka_lodzi;
 extern int rank,size;
 extern volatile char end;
 extern MPI_Datatype MPI_PAKIET_T;
@@ -66,6 +62,7 @@ extern pthread_t threadCom, threadM, threadDelay;
 /* synchro do zmiennej konto */
 extern pthread_mutex_t kucyki_mut;
 extern pthread_mutex_t lodzie_mut;
+extern pthread_mutex_t packetMut;
 
 /* argument musi być, bo wymaga tego pthreads. Wątek monitora, który po jakimś czasie ma wykryć stan */
 extern void *monitorFunc(void *);
@@ -74,7 +71,7 @@ extern void *comFunc(void *);
 
 extern void sendPacket(packet_t *, int, int);
 
-extern void sendPacketInit(packet_init_t *, int, int);
+extern void sendPacketInit(packet_init_t *, int);
 
 #define PROB_OF_SENDING 35
 #define PROB_OF_PASSIVE 5
@@ -95,7 +92,7 @@ extern void sendPacketInit(packet_init_t *, int, int);
 
 /* Tutaj dodaj odwołanie do zegara lamporta */
 extern int lamport;
-#define println(FORMAT, ...) printf("%c[%d;%dm [lam:%d %d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, lamport, rank, ##__VA_ARGS__, 27,0,37);
+#define println(FORMAT, ...); printf("%c[%d;%dm [lam:%d %d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, lamport, rank, ##__VA_ARGS__, 27,0,37);
 
 /* macro debug - działa jak printf, kiedy zdefiniowano
    DEBUG, kiedy DEBUG niezdefiniowane działa jak instrukcja pusta 
