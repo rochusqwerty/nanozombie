@@ -16,7 +16,7 @@
 #define TAKE_BOAT 7
 #define IM_BACK 8
 /* MAX_HANDLERS musi się równać wartości ostatniego typu pakietu + 1 */
-#define MAX_HANDLERS 9 
+#define MAX_HANDLERS 9
 
 #define STARTING_MONEY 1000
 
@@ -33,7 +33,7 @@
 #define FIELDNO 5 //4
 typedef struct {
     int ts; /* zegar lamporta */
-    int kod; //0 - chce kucyk, 1 - nie chce, 2 - zwalnia kucyka, 3 - chce lodz, 4 - nie chce lodzi, 5 - zwalnia lodz
+    int kod; //0 - zadanie  1 - odpowiedz   chce kucyk, 1 - nie chce, 2 - zwalnia kucyka, 3 - chce lodz, 4 - nie chce lodzi, 5 - zwalnia lodz
 
 
     int dst; /* pole ustawiane w sendPacket */
