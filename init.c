@@ -77,6 +77,7 @@ void inicjuj(int *argc, char ***argv)
     //pthread_create( &threadDelay, NULL, delayFunc, 0);
     if (rank==ROOT_PROC) {
 	pthread_create( &threadM, NULL, monitorFunc, 0);
+    
     } 
 }
 

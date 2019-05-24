@@ -37,6 +37,7 @@ int liczba_lodzi;
 
 /* end == TRUE oznacza wyjście z main_loop */
 volatile char end = FALSE;
+volatile char end_travel = FALSE;
 void mainLoop(void);
 
 /* Deklaracje zapowiadające handlerów. */
@@ -99,7 +100,7 @@ void mainLoop(void)
         pakiet.kod=0;
         for(i=0; i<size; i++)
             sendPacket(&pakiet, i, TAKE_PONY);
-        //sem_wait(&all_sem);
+        // sem_wait(&all_sem);
         while(size - liczba_kucykow > gorsze_kucyki)
         {
             STAN_PROCESU=2;
@@ -107,7 +108,7 @@ void mainLoop(void)
         }
         printf("Przyznano ci kucyka :) \n");
         liczba_kucykow--;
-        while (!end)
+        while (!end_travel)
         {
             pthread_mutex_lock( &packetMut );
                 lamport_do_lodzi = lamport;
@@ -137,6 +138,7 @@ void mainLoop(void)
             STAN_PROCESU=7;
 
         }
+        end_travel = FALSE;
 
     }
     
@@ -147,15 +149,19 @@ void *monitorFunc(void *ptr)
 {
     packet_init_t data;
 	srand( time( NULL ) );
-    liczba_kucykow = rand() % (stroje_max - stroje_min) + stroje_min;
+    liczba_kucykow = 0;// rand() % (stroje_max - stroje_min) + stroje_min;
     for(int i = 0; i < rand() % (lodzie_max - lodzie_min) + lodzie_min; i++){
         Lodz lodz;
         lodz.pojemnosc = rand() % (poj_lodzi_max - poj_lodzi_min) + poj_lodzi_min;
+        data.ile_lodzi= lodz.pojemnosc;
         //lodz.lista_id_turystow.clear();
         //kolejka_lodzi.push(lodz);
        // lodz.ile_lodzi = rand() % (poj_lodzi_max - poj_lodzi_min) + poj_lodzi_min;
     }
+    
     data.kucyki = liczba_kucykow;
+    for(int i=0; i<size; i++)
+        sendPacket(&data, i, INIT);
     // data.kolejka = kolejka_lodzi;
 }
 
@@ -215,7 +221,7 @@ void takePony( packet_t *pakiet)
         liczba_kucykow--;
         if(pakiet->kod == 0)
         {
-            sendPacket(&pakiet, pakiet->src, TAKE_PONY);
+            sendPacket(pakiet, pakiet->src, TAKE_PONY);
             pakiet->kod = 1;
         }
     }
@@ -238,7 +244,7 @@ void takeBoat(packet_t *pakiet)
         liczba_lodzi--;
         if(pakiet->kod == 0)
         {
-            sendPacket(&pakiet, pakiet->src, TAKE_BOAT);
+            sendPacket(pakiet, pakiet->src, TAKE_BOAT);
             pakiet->kod = 1;
         }
     }
@@ -252,4 +258,5 @@ void imBack(packet_t *pakiet)
     liczba_kucykow++;
     liczba_lodzi++;
     printf("Przypłynęła nowa łódź \n");   
+    end_travel = TRUE;
 }
