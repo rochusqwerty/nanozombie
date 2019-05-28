@@ -47,18 +47,20 @@ void takeBoat(packet_t *pakiet);
 void imBack(packet_t *pakiet);
 
 /* typ wskaźnik na funkcję zwracającej void i z argumentem packet_t* */
-typedef void (*f_w)(packet_t *);
+typedef void (*f_w1)(packet_t *);
+typedef void (*f_w2)(packet_init_t *);
 /* Lista handlerów dla otrzymanych pakietów
    Nowe typy wiadomości dodaj w main.h, a potem tutaj dodaj wskaźnik do 
      handlera.
    Funkcje handleróœ są na końcu pliku. Nie zapomnij dodać
      deklaracji zapowiadającej funkcji!
 */
-f_w handlers[MAX_HANDLERS] = { 
-            [INIT] = initHandler,
+f_w1 handlers1[MAX_HANDLERS] = { 
             [TAKE_PONY] = takePony,
             [TAKE_BOAT] = takeBoat,
             [IM_BACK] = imBack };
+f_w2 handlers2[2] = { 
+            [INIT] = initHandler};
 
 extern void inicjuj(int *argc, char ***argv);
 extern void finalizuj(void);
@@ -160,9 +162,9 @@ void *monitorFunc(void *ptr)
     }
     
     data.kucyki = liczba_kucykow;
-    for(int i=0; i<size; i++)
-        sendPacket(&data, i, INIT);
+        sendPacketInit(&data, 1);
     // data.kolejka = kolejka_lodzi;
+    return 0;
 }
 
 /* Wątek komunikacyjny - dla każdej otrzymanej wiadomości wywołuje jej handler */
@@ -179,7 +181,7 @@ void *comFunc(void *ptr)
         
 
         //if (status.MPI_TAG == FINISH) end = TRUE;
-        handlers[(int)status.MPI_TAG](&pakiet);
+        handlers1[(int)status.MPI_TAG](&pakiet);
         pthread_mutex_lock(&lock);
             if(lamport<pakiet.ts) lamport = pakiet.ts;
             lamport += 1;
