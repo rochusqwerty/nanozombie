@@ -68,6 +68,18 @@ void inicjuj(int *argc, char ***argv)
     MPI_Type_create_struct(nitems, blocklengths, offsets, typy, &MPI_PAKIET_T);
     MPI_Type_commit(&MPI_PAKIET_T);
 
+    const int nitems_i=3; // Struktura ma FIELDNO elementów - przy dodaniu pola zwiększ FIELDNO w main.h !
+    int       blocklengths_i[3] = {1,1,1}; /* tu zwiększyć na [4] = {1,1,1,1} gdy dodamy nowe pole */
+    MPI_Datatype typy_i[3] = {MPI_INT, MPI_INT,MPI_INT}; /* tu dodać typ nowego pola (np MPI_BYTE, MPI_INT) */
+    MPI_Aint     offsets_i[3];
+
+    offsets_i[0] = offsetof(packet_init_t, ts);
+    offsets_i[1] = offsetof(packet_init_t, kucyki);
+    offsets_i[2] = offsetof(packet_init_t, ile_lodzi);
+
+    MPI_Type_create_struct(nitems_i, blocklengths_i, offsets_i, typy_i, &MPI_PAKIET_INIT_T);
+    MPI_Type_commit(&MPI_PAKIET_INIT_T);
+
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -108,5 +120,5 @@ void sendPacketInit(packet_init_t *data, int type)
     //TO DO for do wszystkich
     int i;
     for(i=0; i<size; i++)
-        MPI_Send( data, 1, MPI_PAKIET_T, i, type, MPI_COMM_WORLD);
+        MPI_Send( data, 1, MPI_PAKIET_INIT_T, i, type, MPI_COMM_WORLD);
 }

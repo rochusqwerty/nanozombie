@@ -7,7 +7,7 @@
 #define lodzie_max 10
 #define poj_lodzi_min 3
 #define poj_lodzi_max 10
-MPI_Datatype MPI_PAKIET_T;
+MPI_Datatype MPI_PAKIET_T, MPI_PAKIET_INIT_T;
 pthread_t threadCom, threadM;
 
 int lamport,lamport_do_kucykow,lamport_do_lodzi;
@@ -89,7 +89,6 @@ void mainLoop(void)
     lamport=0;pakiet.ts=0;
     
     /* pętla główna: sen, wysyłanie przelewów innym bankom */
-    
     while (!end)
     {
         int i=0;
@@ -103,12 +102,14 @@ void mainLoop(void)
         for(i=0; i<size; i++)
             sendPacket(&pakiet, i, TAKE_PONY);
         // sem_wait(&all_sem);
+        println("Kucyki %i, %i, %i", size, liczba_kucykow, gorsze_kucyki);
         while(size - liczba_kucykow > gorsze_kucyki)
         {
             STAN_PROCESU=2;
-
+            println("Kucyki %i, %i, %i", size, liczba_kucykow, gorsze_kucyki);
+            sleep(500);
         }
-        printf("Przyznano ci kucyka :) \n");
+        println("Przyznano ci kucyka :) \n");
         liczba_kucykow--;
         while (!end_travel)
         {
@@ -151,7 +152,8 @@ void *monitorFunc(void *ptr)
 {
     packet_init_t data;
 	srand( time( NULL ) );
-    liczba_kucykow = 0;// rand() % (stroje_max - stroje_min) + stroje_min;
+    liczba_kucykow = 1;// rand() % (stroje_max - stroje_min) + stroje_min;
+    liczba_lodzi = 1;
     for(int i = 0; i < rand() % (lodzie_max - lodzie_min) + lodzie_min; i++){
         Lodz lodz;
         lodz.pojemnosc = rand() % (poj_lodzi_max - poj_lodzi_min) + poj_lodzi_min;
@@ -162,6 +164,8 @@ void *monitorFunc(void *ptr)
     }
     
     data.kucyki = liczba_kucykow;
+    data.ile_lodzi = liczba_lodzi;
+    data.ts = lamport;
         sendPacketInit(&data, 1);
     // data.kolejka = kolejka_lodzi;
     return 0;
@@ -174,11 +178,10 @@ void *comFunc(void *ptr)
     if(rank != 0){
         packet_init_t pak;
         println("[%d] czeka na init\n", rank);
-        MPI_Recv( &pak, 1, MPI_PAKIET_T, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-        pakiet.src = status.MPI_SOURCE;
-        handlers2[(int)status.MPI_TAG](&pakiet);
+        MPI_Recv( &pak, 1, MPI_PAKIET_INIT_T, MPI_ANY_SOURCE, INIT, MPI_COMM_WORLD, &status);
+        handlers2[(int)status.MPI_TAG](&pak);
         pthread_mutex_lock(&lock);
-        if(lamport<pakiet.ts) lamport = pakiet.ts;
+        if(lamport<pak.ts) lamport = pak.ts;
             lamport += 1;
         pthread_mutex_unlock(&lock);
     }

@@ -54,7 +54,7 @@ typedef struct {
 //extern std::queue < Lodz > kolejka_lodzi;
 extern int rank,size;
 extern volatile char end;
-extern MPI_Datatype MPI_PAKIET_T;
+extern MPI_Datatype MPI_PAKIET_T, MPI_PAKIET_INIT_T;
 extern pthread_t threadCom, threadM, threadDelay;
 
 /* do użytku wewnętrznego (implementacja opóźnień komunikacyjnych) */
