@@ -170,8 +170,19 @@ void *monitorFunc(void *ptr)
 /* Wątek komunikacyjny - dla każdej otrzymanej wiadomości wywołuje jej handler */
 void *comFunc(void *ptr)
 {
-
     MPI_Status status;
+    if(rank != 0){
+        packet_init_t pak;
+        println("[%d] czeka na init\n", rank);
+        MPI_Recv( &pak, 1, MPI_PAKIET_T, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        pakiet.src = status.MPI_SOURCE;
+        handlers2[(int)status.MPI_TAG](&pakiet);
+        pthread_mutex_lock(&lock);
+        if(lamport<pakiet.ts) lamport = pakiet.ts;
+            lamport += 1;
+        pthread_mutex_unlock(&lock);
+    }
+
     packet_t pakiet;
     /* odbieranie wiadomości */
     while ( !end ) {
