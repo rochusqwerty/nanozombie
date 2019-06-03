@@ -48,8 +48,8 @@ void inicjuj(int *argc, char ***argv)
     check_thread_support(provided);
 
 
-    /* nowa łódź_Type_commit) potrzebne tylko, jeżeli
-       nowa łódź w rodzaju MPI_Send(&typ, sizeof(pakiet_t), MPI_BYTE....
+    /* _Type_commit) potrzebne tylko, jeżeli
+       w rodzaju MPI_Send(&typ, sizeof(pakiet_t), MPI_BYTE....
     */ 
     /* sklejone z stackoverflow */
     const int nitems=FIELDNO; // Struktura ma FIELDNO elementów - przy dodaniu pola zwiększ FIELDNO w main.h !
@@ -110,11 +110,15 @@ void sendPacket(packet_t *data, int dst, int type)
     MPI_Send( data, 1, MPI_PAKIET_T, dst, type, MPI_COMM_WORLD);
 }
 
-void sendPacketAll(packet_t *data, int type)
+void sendPacketAll(packet_t *data, int type, int stan)
 {
     pthread_mutex_lock( &packetMut );
 	    lamport += 1;
+        lamport_do_kucykow = lamport;
+        lamport_do_lodzi = lamport;
+        STAN_PROCESU = stan;
 	pthread_mutex_unlock( &packetMut );
+    println("Send: %i", type)
     data->ts = lamport;
     int i;
     for(i=0; i<size; i++)
@@ -128,7 +132,6 @@ void sendPacketInit(packet_init_t *data, int type)
 	    lamport += 1;
 	pthread_mutex_unlock( &packetMut );
     data->ts = lamport;
-    //TO DO for do wszystkich
     int i;
     for(i=1; i<size; i++)
         MPI_Send( data, 1, MPI_PAKIET_INIT_T, i, type, MPI_COMM_WORLD);

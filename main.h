@@ -12,8 +12,9 @@
 #define TAKE_BOAT 3
 #define IM_BACK 4
 #define RESPONSE_PONY 5
+#define RESPONSE_BOAT 6
 /* MAX_HANDLERS musi się równać wartości ostatniego typu pakietu + 1 */
-#define MAX_HANDLERS 6
+#define MAX_HANDLERS 7
 
 #include <mpi.h>
 #include <stdlib.h>
@@ -71,7 +72,7 @@ extern void *monitorFunc(void *);
 extern void *comFunc(void *);
 
 extern void sendPacket(packet_t *, int, int);
-extern void sendPacketAll(packet_t *, int);
+extern void sendPacketAll(packet_t *, int, int);
 extern void sendPacketInit(packet_init_t *, int);
 
 #define PROB_OF_SENDING 35
@@ -92,7 +93,7 @@ extern void sendPacketInit(packet_init_t *, int);
 #define P_CLR printf("%c[%d;%dm",27,0,37);
 
 /* Tutaj dodaj odwołanie do zegara lamporta */
-extern int lamport;
+extern int lamport, lamport_do_kucykow, lamport_do_lodzi, STAN_PROCESU;
 #define println(FORMAT, ...); printf("%c[%d;%dm [lam:%d %d]: " FORMAT "%c[%d;%dm\n",  27, (1+(rank/7))%2, 31+(6+rank)%7, lamport, rank, ##__VA_ARGS__, 27,0,37);
 
 /* macro debug - działa jak printf, kiedy zdefiniowano
