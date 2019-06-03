@@ -11,8 +11,9 @@
 #define TAKE_PONY 2
 #define TAKE_BOAT 3
 #define IM_BACK 4
+#define RESPONSE_PONY 5
 /* MAX_HANDLERS musi się równać wartości ostatniego typu pakietu + 1 */
-#define MAX_HANDLERS 5
+#define MAX_HANDLERS 6
 
 #include <mpi.h>
 #include <stdlib.h>
@@ -70,7 +71,7 @@ extern void *monitorFunc(void *);
 extern void *comFunc(void *);
 
 extern void sendPacket(packet_t *, int, int);
-
+extern void sendPacketAll(packet_t *, int);
 extern void sendPacketInit(packet_init_t *, int);
 
 #define PROB_OF_SENDING 35

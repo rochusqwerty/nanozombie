@@ -29,6 +29,7 @@ sem_t all_sem;
 
 /* Ile każdy proces ma na początku*/
 int liczba_kucykow=0;
+int liczba_kucykow_p=0;
 //WERSJA NA 3
 int liczba_lodzi;
 
@@ -37,6 +38,7 @@ int liczba_lodzi;
 
 /* end == TRUE oznacza wyjście z main_loop */
 volatile char end = FALSE;
+volatile char init = TRUE;
 volatile char end_travel = FALSE;
 void mainLoop(void);
 
@@ -45,6 +47,7 @@ void initHandler(packet_init_t *pakiet);
 void takePony(packet_t *pakiet);
 void takeBoat(packet_t *pakiet);
 void imBack(packet_t *pakiet);
+void responsePony(packet_t *pakiet);
 
 /* typ wskaźnik na funkcję zwracającej void i z argumentem packet_t* */
 typedef void (*f_w1)(packet_t *);
@@ -58,7 +61,8 @@ typedef void (*f_w2)(packet_init_t *);
 f_w1 handlers1[MAX_HANDLERS] = { 
             [TAKE_PONY] = takePony,
             [TAKE_BOAT] = takeBoat,
-            [IM_BACK] = imBack };
+            [IM_BACK] = imBack,
+            [RESPONSE_PONY] = responsePony};
 f_w2 handlers2[2] = { 
             [INIT] = initHandler};
 
@@ -87,46 +91,55 @@ void mainLoop(void)
     // int dst;
     packet_t pakiet;
     lamport=0;pakiet.ts=0;
-    
-    /* pętla główna: sen, wysyłanie przelewów innym bankom */
+    while(init){
+
+    }
     while (!end)
     {
         int i=0;
 
         STAN_PROCESU=1;
-        liczba_kucykow-=gorsze_kucyki;
+        // liczba_kucykow-=gorsze_kucyki;
         pthread_mutex_lock( &packetMut );
             lamport_do_kucykow = lamport;
-        pthread_mutex_unlock( &packetMut );
-        pakiet.kod=0;
-        for(i=0; i<size; i++)
-            sendPacket(&pakiet, i, TAKE_PONY);
-        // sem_wait(&all_sem);
-        println("Kucyki %i, %i, %i", size, liczba_kucykow, gorsze_kucyki);
-        while(size - liczba_kucykow > gorsze_kucyki)
-        {
             STAN_PROCESU=2;
-            println("Kucyki %i, %i, %i", size, liczba_kucykow, gorsze_kucyki);
-            sleep(500);
-        }
-        println("Przyznano ci kucyka :) \n");
-        liczba_kucykow--;
-        while (!end_travel)
+        pthread_mutex_unlock( &packetMut );
+        // pakiet.kod=0;
+        
+
+        sendPacketAll(&pakiet, TAKE_PONY);
+
+        // sem_wait(&all_sem);
+        //println("Kucyki %i, %i, %i", size, liczba_kucykow, gorsze_kucyki);
+        while(size - liczba_kucykow_p > gorsze_kucyki || liczba_kucykow<0)
         {
-            pthread_mutex_lock( &packetMut );
-                lamport_do_lodzi = lamport;
-            pthread_mutex_unlock( &packetMut );
-            pakiet.kod=0;
-            for(i=0; i<size; i++)
-                sendPacket(&pakiet, i, TAKE_BOAT);
-            while(size - liczba_lodzi > gorsze_lodzie)
-            {
-                STAN_PROCESU=4;
+            //println("Kucyki %i, %i, %i", size - liczba_kucykow_p, liczba_kucykow, gorsze_kucyki);
+            sleep(1);
+        }
+         pthread_mutex_lock( &packetMut );
+            STAN_PROCESU=2;
+        pthread_mutex_unlock( &packetMut );
+        println("Kucyki %i, %i, %i", size - liczba_kucykow_p, liczba_kucykow, gorsze_kucyki);
+        println("Przyznano ci kucyka :) \n");
+        liczba_kucykow = liczba_kucykow - gorsze_kucyki;
+        gorsze_kucyki = 0;
+        println("Kucyki %i, %i, %i", size - liczba_kucykow_p, liczba_kucykow, gorsze_kucyki);
+        // while (!end_travel)
+        // {
+            // pthread_mutex_lock( &packetMut );
+            //     lamport_do_lodzi = lamport;
+            // pthread_mutex_unlock( &packetMut );
+            // pakiet.kod=0;
+            // for(i=0; i<size; i++)
+            //     sendPacket(&pakiet, i, TAKE_BOAT);
+            // while(size - liczba_lodzi > gorsze_lodzie)
+            // {
+            //     STAN_PROCESU=4;
                 
-            }
-            printf("Przyznano ci lodz :) \n");
-            liczba_lodzi--;
-            STAN_PROCESU=5;
+            // }
+            // printf("Przyznano ci lodz :) \n");
+            // liczba_lodzi--;
+            // STAN_PROCESU=5;
 
             //WYPŁYNIĘCIE
             STAN_PROCESU=6;
@@ -135,13 +148,14 @@ void mainLoop(void)
             sleep((float) czas_rejsu/10);
             printf("Powrót z rejsu \n");
             liczba_kucykow++;
-            liczba_lodzi++;                   
+            // liczba_lodzi++;                   
             for(i=0; i<size; i++)
-                sendPacket(&pakiet, i, IM_BACK);
+                if(i!=rank)
+                    sendPacket(&pakiet, i, IM_BACK);
             STAN_PROCESU=7;
 
-        }
-        end_travel = FALSE;
+        // }
+        // end_travel = FALSE;
 
     }
     
@@ -153,6 +167,7 @@ void *monitorFunc(void *ptr)
     packet_init_t data;
 	srand( time( NULL ) );
     liczba_kucykow = 1;// rand() % (stroje_max - stroje_min) + stroje_min;
+    liczba_kucykow_p = liczba_kucykow;
     liczba_lodzi = 1;
     for(int i = 0; i < rand() % (lodzie_max - lodzie_min) + lodzie_min; i++){
         Lodz lodz;
@@ -168,6 +183,7 @@ void *monitorFunc(void *ptr)
     data.ts = lamport;
         sendPacketInit(&data, 1);
     // data.kolejka = kolejka_lodzi;
+    init = FALSE;
     return 0;
 }
 
@@ -185,17 +201,16 @@ void *comFunc(void *ptr)
             lamport += 1;
         pthread_mutex_unlock(&lock);
     }
-
     packet_t pakiet;
     /* odbieranie wiadomości */
     while ( !end ) {
 	println("[%d] czeka na recv\n", rank);
         MPI_Recv( &pakiet, 1, MPI_PAKIET_T, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
         pakiet.src = status.MPI_SOURCE;
-        
 
         //if (status.MPI_TAG == FINISH) end = TRUE;
         handlers1[(int)status.MPI_TAG](&pakiet);
+
         pthread_mutex_lock(&lock);
             if(lamport<pakiet.ts) lamport = pakiet.ts;
             lamport += 1;
@@ -213,36 +228,51 @@ void initHandler( packet_init_t *pakiet)
     println("\tdostałem %d\n", pakiet->kucyki);
     pthread_mutex_lock(&kucyki_mut);
         liczba_kucykow=pakiet->kucyki;
+        liczba_kucykow_p = liczba_kucykow;
         println("Stan kucyki: %d\n", liczba_kucykow);
     pthread_mutex_unlock(&kucyki_mut);
     pthread_mutex_lock(&lodzie_mut);
         liczba_lodzi=pakiet->ile_lodzi//kolejka;
         println("Stan lodzie: %d\n", liczba_lodzi);//kolejka_lodzi.size());
     pthread_mutex_unlock(&lodzie_mut);
+    init = FALSE;
 }
 
 
 void takePony( packet_t *pakiet)
 {
+    pthread_mutex_lock( &packetMut );
+    int temp = STAN_PROCESU;
+    pthread_mutex_unlock( &packetMut );
     //ile_pozostalo--;
-    if(lamport_do_kucykow == pakiet->ts)
+    if(temp==2)
     {
-        if (pakiet->src < rank)
-            liczba_kucykow--;
-        else
-            gorsze_kucyki++;
-    }
-    else if(lamport_do_kucykow > pakiet->ts)
-    {
-        liczba_kucykow--;
-        if(pakiet->kod == 0)
+        if(lamport_do_kucykow == pakiet->ts)
         {
-            sendPacket(pakiet, pakiet->src, TAKE_PONY);
-            pakiet->kod = 1;
+            if (pakiet->src < rank)
+                liczba_kucykow--;
+            else
+                gorsze_kucyki++;
+        }
+        else if(lamport_do_kucykow > pakiet->ts)
+        {
+            liczba_kucykow--;
+        }
+        else{
+            gorsze_kucyki++;   
+            println("Take: %i %i",lamport_do_kucykow, pakiet->ts);
+            //sendPacket(pakiet, pakiet->src, RESPONSE_PONY);
         }
     }
     else
-        gorsze_kucyki++;   
+    {
+        liczba_kucykow--;
+    }
+}
+
+
+void responsePony( packet_t *pakiet){
+    printf("ODP \n");   
 }
 
 void takeBoat(packet_t *pakiet)
@@ -272,7 +302,7 @@ void takeBoat(packet_t *pakiet)
 void imBack(packet_t *pakiet)
 {
     liczba_kucykow++;
-    liczba_lodzi++;
+    // liczba_lodzi++;
     printf("Przypłynęła nowa łódź \n");   
     end_travel = TRUE;
 }
