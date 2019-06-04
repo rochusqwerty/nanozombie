@@ -94,7 +94,6 @@ void mainLoop(void)
          pthread_mutex_lock( &packetMut );
             STAN_PROCESU=3;
         pthread_mutex_unlock( &packetMut );
-        println("Kucyki %i, %i, %i", size - liczba_kucykow_p, gorsze_kucyki, liczba_kucykow);
         println("Przyznano ci kucyka :) \n");
         liczba_kucykow = liczba_kucykow - gorsze_kucyki;
         gorsze_kucyki = 0;
@@ -107,7 +106,6 @@ void mainLoop(void)
         pthread_mutex_lock( &packetMut );
             STAN_PROCESU=5;
         pthread_mutex_unlock( &packetMut );
-        println("Lodzie %i, %i, %i", size - liczba_lodzi_p, liczba_lodzi, gorsze_lodzie);
         println("Przyznano ci lodz :) \n");
         liczba_lodzi = liczba_lodzi - gorsze_lodzie;
         gorsze_lodzie = 0;
@@ -129,6 +127,7 @@ void *monitorFunc(void *ptr)
     liczba_kucykow = 2;// rand() % (stroje_max - stroje_min) + stroje_min;
     liczba_kucykow_p = liczba_kucykow;
     liczba_lodzi = 1;
+    liczba_lodzi_p = liczba_lodzi;
     // for(int i = 0; i < rand() % (lodzie_max - lodzie_min) + lodzie_min; i++){
     //     Lodz lodz;
     //     lodz.pojemnosc = rand() % (poj_lodzi_max - poj_lodzi_min) + poj_lodzi_min;
@@ -221,8 +220,10 @@ void takePony( packet_t *pakiet)
 }
 
 void responsePony( packet_t *pakiet){
-    if(STAN_PROCESU == 2)
+    if(STAN_PROCESU == 2){
         nie_kucyk++; 
+    }
+        
 }
 
 void responseBoat( packet_t *pakiet){
