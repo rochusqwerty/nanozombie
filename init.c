@@ -105,8 +105,8 @@ void sendPacket(packet_t *data, int dst, int type)
 {
     pthread_mutex_lock( &packetMut );
 	    lamport += 1;
+        data->ts = lamport;
 	pthread_mutex_unlock( &packetMut );
-    data->ts = lamport;
     MPI_Send( data, 1, MPI_PAKIET_T, dst, type, MPI_COMM_WORLD);
 }
 
@@ -117,9 +117,9 @@ void sendPacketAll(packet_t *data, int type, int stan)
         lamport_do_kucykow = lamport;
         lamport_do_lodzi = lamport;
         STAN_PROCESU = stan;
+        data->ts = lamport;
 	pthread_mutex_unlock( &packetMut );
     println("Send: %i", type)
-    data->ts = lamport;
     int i;
     for(i=0; i<size; i++)
         if(i!=rank)
@@ -130,8 +130,8 @@ void sendPacketInit(packet_init_t *data, int type)
 {
     pthread_mutex_lock( &packetMut );
 	    lamport += 1;
+        data->ts = lamport;
 	pthread_mutex_unlock( &packetMut );
-    data->ts = lamport;
     int i;
     for(i=1; i<size; i++)
         MPI_Send( data, 1, MPI_PAKIET_INIT_T, i, type, MPI_COMM_WORLD);

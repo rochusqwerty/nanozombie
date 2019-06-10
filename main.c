@@ -21,7 +21,7 @@ pthread_mutex_t kucyki_mut = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t lodzie_mut = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t lamport_mut = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t packetMut = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t packet_mut = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t stan_mut = PTHREAD_MUTEX_INITIALIZER;
 sem_t all_sem;
 // struct Turysta{
 //     int info_s; //0-nie che stroju, 1-chce stroj, 2-oddał stroj
@@ -88,28 +88,34 @@ void mainLoop(void)
     while (!end)
     {
         sendPacketAll(&pakiet, TAKE_PONY, 2);
-        while(size - liczba_kucykow_p > gorsze_kucyki + nie_kucyk || liczba_kucykow < 1)
+        while(size - liczba_kucykow > gorsze_kucyki + nie_kucyk || liczba_kucykow < 1)
         {
         }
-         pthread_mutex_lock( &packetMut );
+        pthread_mutex_lock( &stan_mut );
             STAN_PROCESU=3;
-        pthread_mutex_unlock( &packetMut );
+        pthread_mutex_unlock( &stan_mut );
         println("Przyznano ci kucyka :) \n");
-        liczba_kucykow = liczba_kucykow - gorsze_kucyki;
-        gorsze_kucyki = 0;
-        nie_kucyk = 0;
+
+        pthread_mutex_lock( &kucyki_mut );
+            liczba_kucykow = liczba_kucykow - gorsze_kucyki;
+            gorsze_kucyki = 0;
+            nie_kucyk = 0;
+        pthread_mutex_unlock( &kucyki_mut );
 
         sendPacketAll(&pakiet, TAKE_BOAT, 4);
-        while(size - liczba_lodzi_p > gorsze_lodzie + nie_lodz || liczba_lodzi < 1)
+        while(size - liczba_lodzi > gorsze_lodzie + nie_lodz || liczba_lodzi < 1)
         {
         }
-        pthread_mutex_lock( &packetMut );
+        pthread_mutex_lock( &stan_mut );
             STAN_PROCESU=5;
-        pthread_mutex_unlock( &packetMut );
+        pthread_mutex_unlock( &stan_mut );
         println("Przyznano ci lodz :) \n");
-        liczba_lodzi = liczba_lodzi - gorsze_lodzie;
-        gorsze_lodzie = 0;
-        nie_lodz = 0;
+
+        pthread_mutex_lock( &lodzie_mut );
+            liczba_lodzi = liczba_lodzi - gorsze_lodzie;
+            gorsze_lodzie = 0;
+            nie_lodz = 0;
+        pthread_mutex_unlock( &lodzie_mut );
 
         int czas_rejsu = rand() %5 + 1;
         sleep(czas_rejsu);
@@ -124,10 +130,16 @@ void *monitorFunc(void *ptr)
 {
     packet_init_t data;
 	srand( time( NULL ) );
-    liczba_kucykow = 2;// rand() % (stroje_max - stroje_min) + stroje_min;
-    liczba_kucykow_p = liczba_kucykow;
-    liczba_lodzi = 1;
-    liczba_lodzi_p = liczba_lodzi;
+    pthread_mutex_lock(&kucyki_mut);
+        liczba_kucykow = 2;// rand() % (stroje_max - stroje_min) + stroje_min;
+        liczba_kucykow_p = liczba_kucykow;
+        data.kucyki = liczba_kucykow;
+    pthread_mutex_unlock(&kucyki_mut);
+    pthread_mutex_lock(&lodzie_mut);
+        liczba_lodzi = 1;
+        liczba_lodzi_p = liczba_lodzi;
+        data.ile_lodzi = liczba_lodzi;
+    pthread_mutex_unlock(&lodzie_mut);
     // for(int i = 0; i < rand() % (lodzie_max - lodzie_min) + lodzie_min; i++){
     //     Lodz lodz;
     //     lodz.pojemnosc = rand() % (poj_lodzi_max - poj_lodzi_min) + poj_lodzi_min;
@@ -136,11 +148,11 @@ void *monitorFunc(void *ptr)
     //     //kolejka_lodzi.push(lodz);
     //    // lodz.ile_lodzi = rand() % (poj_lodzi_max - poj_lodzi_min) + poj_lodzi_min;
     // }
-    
-    data.kucyki = liczba_kucykow;
-    data.ile_lodzi = liczba_lodzi;
-    data.ts = lamport;
-        sendPacketInit(&data, 1);
+    pthread_mutex_lock(&packetMut);
+        data.ts = lamport;
+    pthread_mutex_unlock(&packetMut);
+
+    sendPacketInit(&data, 1);
     init = FALSE;
     return 0;
 }
@@ -174,95 +186,134 @@ void *comFunc(void *ptr)
 
 void initHandler( packet_init_t *pakiet)
 {
-    pthread_mutex_lock(&packetMut);
+    pthread_mutex_lock(&kucyki_mut);
         liczba_kucykow=pakiet->kucyki;
         liczba_kucykow_p = liczba_kucykow;
-        println("Stan kucyki: %d\n", liczba_kucykow);
-    pthread_mutex_unlock(&packetMut);
-    pthread_mutex_lock(&packetMut);
+        //println("Stan kucyki: %d\n", liczba_kucykow);
+    pthread_mutex_unlock(&kucyki_mut);
+    pthread_mutex_lock(&lodzie_mut);
         liczba_lodzi=pakiet->ile_lodzi;
         liczba_lodzi_p=liczba_lodzi;
-        println("Stan lodzie: %d\n", liczba_lodzi);
-    pthread_mutex_unlock(&packetMut);
+        //println("Stan lodzie: %d\n", liczba_lodzi);
+    pthread_mutex_unlock(&lodzie_mut);
     init = FALSE;
 }
 
 void takePony( packet_t *pakiet)
 {
     
-    pthread_mutex_lock( &packetMut );
+    pthread_mutex_lock( &stan_mut );
     int temp = STAN_PROCESU;
-    pthread_mutex_unlock( &packetMut );
+    pthread_mutex_unlock( &stan_mut );
     if(temp==2)
     {
         if(lamport_do_kucykow == pakiet->ts)
         {
             if (pakiet->src < rank){
-                liczba_kucykow--;
+                pthread_mutex_lock( &kucyki_mut );
+                    liczba_kucykow--;
+                pthread_mutex_unlock( &kucyki_mut );
             }
-            else{
-                gorsze_kucyki++;
+            else
+            {
+                pthread_mutex_lock( &kucyki_mut );
+                    gorsze_kucyki++;
+                pthread_mutex_unlock( &kucyki_mut );
+                sendPacket(pakiet, pakiet->src, RESPONSE_PONY);
             }
         }
         else if(lamport_do_kucykow > pakiet->ts)
         {
-            liczba_kucykow--;
+            pthread_mutex_lock( &kucyki_mut );
+                liczba_kucykow--;
+            pthread_mutex_unlock( &kucyki_mut );
         }
-        else{
-            gorsze_kucyki++;   
+        else
+        {
+            pthread_mutex_lock( &kucyki_mut );
+                gorsze_kucyki++;
+            pthread_mutex_unlock( &kucyki_mut );
+            sendPacket(pakiet, pakiet->src, RESPONSE_PONY);
         }
     }
     else
     {
-        liczba_kucykow--;
+        pthread_mutex_lock( &kucyki_mut );
+            liczba_kucykow--;
+        pthread_mutex_unlock( &kucyki_mut );
         sendPacket(pakiet, pakiet->src, RESPONSE_PONY);
     }
 }
 
 void responsePony( packet_t *pakiet){
     if(STAN_PROCESU == 2){
-        nie_kucyk++; 
+        pthread_mutex_lock( &kucyki_mut );
+            nie_kucyk++;
+        pthread_mutex_unlock( &kucyki_mut );
     }
         
 }
 
 void responseBoat( packet_t *pakiet){
     if(STAN_PROCESU == 4)
-        nie_lodz++;
+        pthread_mutex_lock( &lodzie_mut );
+            nie_lodz++;
+        pthread_mutex_unlock( &lodzie_mut );
 }
 
 void takeBoat(packet_t *pakiet)
 {
-    pthread_mutex_lock( &packetMut );
+    pthread_mutex_lock( &stan_mut );
     int temp = STAN_PROCESU;
-    pthread_mutex_unlock( &packetMut );
+    pthread_mutex_unlock( &stan_mut );
     if(temp==4)
     {
         if(lamport_do_lodzi == pakiet->ts)
         {
             if (pakiet->src < rank)
-                liczba_lodzi--;
+            {
+                pthread_mutex_lock( &lodzie_mut );
+                    liczba_lodzi--;
+                pthread_mutex_unlock( &lodzie_mut );
+            }
             else
-                gorsze_lodzie++;
+            {
+                pthread_mutex_lock( &lodzie_mut );
+                    gorsze_lodzie++;
+                pthread_mutex_unlock( &lodzie_mut );
+                sendPacket(pakiet, pakiet->src, RESPONSE_BOAT);
+            }
         }
         else if(lamport_do_kucykow > pakiet->ts)
         {
-            liczba_lodzi--;
+            pthread_mutex_lock( &lodzie_mut );
+                liczba_lodzi--;
+            pthread_mutex_unlock( &lodzie_mut );
         }
-        else{
-            gorsze_lodzie++;   
+        else
+        {
+            pthread_mutex_lock( &lodzie_mut );
+                gorsze_lodzie++;
+            pthread_mutex_unlock( &lodzie_mut );
+            sendPacket(pakiet, pakiet->src, RESPONSE_BOAT);
         }
     }
     else
     {
-        liczba_lodzi--;
+        pthread_mutex_lock( &lodzie_mut );
+            liczba_lodzi--;
+        pthread_mutex_unlock( &lodzie_mut );
         sendPacket(pakiet, pakiet->src, RESPONSE_BOAT);
     }
 }
 
 void imBack(packet_t *pakiet)
 {
-    liczba_kucykow++;
-    liczba_lodzi++;
+    pthread_mutex_lock( &kucyki_mut );
+        liczba_kucykow++;
+    pthread_mutex_unlock( &kucyki_mut );
+    pthread_mutex_lock( &lodzie_mut );
+        liczba_lodzi++;
+    pthread_mutex_unlock( &lodzie_mut );
     end_travel = TRUE;
 }
